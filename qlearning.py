@@ -50,21 +50,55 @@ def random_action(env):
 
 def game_loop(env: gym.Env, q_table: np.ndarray, state: int, action: int) -> tuple:
     # Perform the selected action
-    new_state, reward, done, _ = env.step(action)
+    new_state, reward, done, _ , info = env.step(action)
 
     # Update the Q-table using the q_function
-    q_table[state, action] = q_function(q_table, state, action, reward, new_state)
+    q_table = q_function(q_table, state, action, reward, new_state)
 
     return q_table, new_state, reward, done
 
-env = gym.make("FrozenLake-v1", map_name="4x4", is_slippery=False, render_mode="human")
+EPOCH = 20000
+MAX_STEPS = 100
+
+env = gym.make("FrozenLake-v1", map_name="4x4", is_slippery=False)
 q_table = init_q_table(env.observation_space.n, env.action_space.n)
 
+for i in range(EPOCH):
+    state, info = env.reset()
+    for step in range(MAX_STEPS):
+        action = random_action(env)
+        q_table, state, done, reward = game_loop(env, q_table, state, action)
+        if done:
+            break
+
+print(f"\nQ-Table after epoch {i + 1}:\n")
+
+for states in q_table:
+    for actions in states:
+        if actions == max(states):
+            print("\033[4m", end="")
+        else:
+            print("\033[0m", end="")
+        if actions > 0:
+            print("\033[92m", end="")
+        else:
+            print("\033[00m", end="")
+        print(round(actions, 3), end="\t")
+    print()
+env.close()
+
+def best_action(q_table: np.ndarray, state: int) -> int:
+    return np.argmax(q_table[state, :])
+
+
+env = gym.make("FrozenLake-v1", map_name="4x4", is_slippery=False, render_mode="human")
+
 state, info = env.reset()
-while True:
+while (True):
     env.render()
-    action = random_action(env)
-    q_table, new_state, reward, done = game_loop(env, q_table, state, action)
+    action = best_action(q_table, state)
+    q_table, state, done, reward = game_loop(env, q_table, state, action)
     if done:
         break
+
 env.close()
